@@ -3,8 +3,10 @@ library("glmnet") # linear
 library("e1071") # svm
 library("class") # knn
 
-do_logit <- TRUE
-do_svm <- TRUE
+do_logit <- FALSE
+do_linear_svm <- FALSE
+do_radial_svm <- TRUE
+do_knn <- FALSE
 
 load("./data/amnesty_s95_dtm.RData")
 # aiua.dtm available
@@ -40,6 +42,7 @@ cat()
 
 if(do_logit)
 {
+	print("Running logistic analysis with 5-fold x-validation (LASSO)...")
 # Fit logistic regression
 # 10-fold cross validation
 nfold <- 5 # 5 for testing
@@ -58,8 +61,9 @@ print(sprintf("Logit best (lambda = %.2e) CV MSE: %.3f",cvfit$lambda.min, mse))
 
 }
 
-if(do_svm)
+if(do_linear_svm) # takes forever
 {
+	print("Running SVM analysis with linear kernel...")
 	linear.svm.fit <- svm(train.x, train.y, kernel = 'linear')
 	
 	# skip hyperparameter optimization
@@ -70,5 +74,45 @@ if(do_svm)
 
 }
 
+if(do_radial_svm) 
+{
+	print("Running SVM analysis with radial kernel...")
+# ## Compare to Radial SVM
+radial.svm.fit <- svm(train.x, train.y, kernel = 'radial')
+
+# skip hyperparameter optimization
+predictions <- predict(radial.svm.fit, test.x)
+predictions <- as.numeric(predictions > 0)
+mse <- mean(predictions != test.y)
+print(sprintf("Radial SVM MSE: %.3f",mse))
+}
 
 
+if(do_knn)
+{
+	print("Running kNN analysis...")
+performance <- data.frame()
+
+for (k in seq(1, 8, by = 1))
+{
+	knn.fit <- knn(train.x,test.x,train.y, k = k)
+
+	predictions <- as.numeric(as.character(knn.fit))
+	mse <- mean(predictions != test.y)
+
+	performance <- rbind(performance, data.frame(K = k, MSE = mse))
+
+}
+
+best.k <- with(performance, K[which(MSE == min(MSE))])
+best.mse <- with(subset(performance, K == best.k), MSE)
+print(sprintf("kNN best (k = %d) MSE: %.3f",best.k,best.mse))
+
+ggplot(performance,aes(x=K,y=MSE)) +
+	geom_point() +
+	xlab("K") +
+	ylab("Miss-classification Error")
+
+ggsave("./figures/aiua_knn_perf.pdf")	
+
+}

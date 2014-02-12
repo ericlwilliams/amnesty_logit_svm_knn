@@ -7,7 +7,7 @@ library(plyr)
 
 data.path <- "./data/aiua.csv"
 sparsity = 0.95
-
+# using stemming
 ua.dt <- read.csv(data.path,sep=",",stringsAsFactors=FALSE)
 
 ua.dt <- data.table(ua.dt)
@@ -29,6 +29,7 @@ corpus <- Corpus(DataframeSource(documents))
 corpus <- tm_map(corpus, tolower)
 corpus <- tm_map(corpus, stripWhitespace)
 corpus <- tm_map(corpus, removeNumbers)
+corpus <- tm_map(corpus, stemDocument, language="english")
 corpus <- tm_map(corpus, removeWords, c(stopwords('english'),"amnesty","international","information","human","rights","uan@aiusa.org","(m)","amnestyusa.org/urgent/","()","(),"))
 
 aiua.dtm <- DocumentTermMatrix(corpus)
@@ -53,9 +54,6 @@ rm(sparsity)
 rm(ua.dt)
 
 save.image("./data/amnesty_s95_dtm.RData")
-
-
-
 
 
 
